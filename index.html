@@ -3,6 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<title>浮层拖动</title>
+
 	<style type="text/css">
 				
 		.slide-wraper {
@@ -26,9 +27,9 @@
 			margin-left: -600px;
 			width: 1099px;
 			height: 569px;
-			background-image: url(images/fea-37.png);
+			background-image: url(img/fea-37.png);
 			/* 如果浏览器支持image-set，在Retina屏下，会选择image-set中的@2x背景图像 */
-			background-image: -webkit-image-set(url('./images/fea-37.png') 1x,url('./images/fea-37_2x.png') 2x);
+			background-image: -webkit-image-set(url('./img/fea-37.png') 1x,url('./img/fea-37_2x.png') 2x);
 			background-repeat: no-repeat;
 		}
 
@@ -43,7 +44,7 @@
 			background-color: hsla(0,0%,100%,.7);
 			box-shadow: 0 0 5px 5px #fff;
 			cursor: move;
-			transform: rotate(45deg) skew(-20deg,-20deg);
+			transform: rotate(45deg) skew(-5deg,-5deg);
 		}
 
 		.upper-mask {
@@ -64,8 +65,8 @@
 			margin-top: -261px;
 			width: 1102px;
 			height: 566px;
-			background-image: url(images/fea-35.png);
-			background-image: -webkit-image-set(url('./images/fea-35.png') 1x,url('./images/fea-35_2x.png') 2x);
+			background-image: url(img/fea-35.png);
+			background-image: -webkit-image-set(url('./img/fea-35.png') 1x,url('./img/fea-35_2x.png') 2x);
 			background-repeat: no-repeat;
 		}
 
@@ -82,83 +83,86 @@
 	</div>
 
 	<script >
-		(function() {
 
-		// 拖动的图标
-		var drag_bar = document.getElementById('drag-bar');
-		// 浮动层
-		var upper_mask = document.getElementById('upper-mask');
-		// 浮动层图片
-		var mask_img = document.getElementById('mask-img');
-		// 暂不考虑resize事件后的变化
-		var w_width = document.documentElement.clientWidth || document.body.clientWidth;
+		window.onload = function() {
+			// 移动或PC
+			var m = 'ontouchstart' in window ? true : false;
+			var st = m ? "touchstart" : "mousedown";
+			var mo = m ? "touchmove" : "mousemove";
+			var en = m ? "touchend" : "mouseup";
 
-		// 固定浮动层图片位置
-		mask_img.style.right = w_width / 2 - 1102 + 601 + 'px';
+			// 拖动的图标
+			var drag_bar = document.getElementById('drag-bar');
+			// 浮动层
+			var upper_mask = document.getElementById('upper-mask');
+			// 浮动层图片
+			var mask_img = document.getElementById('mask-img');
+			// 暂不考虑resize事件后的变化
+			var w_width = document.documentElement.clientWidth || document.body.clientWidth;
+			// 固定浮动层图片位置
+			mask_img.style.right = w_width / 2 - 1102 + 601 + 'px';
 
-		var startX;
+			var X, drag;
 
-		function dragHandler(e) {
-			e = e || event;
-			startX = e.clientX
-			// 图标点击后监听鼠标移动事件，即“拖动”
-			document.addEventListener("mousemove", moveHandler, false);
-			return false;
-		}
-		// 更新拖动的遮罩的宽度
-		function moveHandler(e) {
-			e = e || event;
-			upper_mask.style.width = w_width - e.clientX + 'px';
-		}
+			function dragStart(e) {
+				if (drag) return;
+				// 图标点击或触摸添加监听		
+				document.addEventListener(mo, dragMove, false);
+				drag = true;
+			}
 
-		function remove() {
-			document.removeEventListener("mousemove", moveHandler, false);
-		}
+			// 更新拖动的遮罩的宽度
+			function dragMove(e) {
+				e = e || event;
+				e.preventDefault();
+				X = e.clientX || e.touches[0].clientX;
+				upper_mask.style.width = w_width - X + 'px';
+			}
 
-		drag_bar.addEventListener("mousedown", dragHandler, false);
-		document.addEventListener("mouseup", remove, false);
+			function dragEnd() {
+				if (!drag) return;
+				document.removeEventListener(mo, dragMove, false);
+				drag = false;
+			}
 
-		// 开头动画，分两步
-		function anime(obj, end, fn) {
-			obj.timer && clearInterval(obj.timer);
+			drag_bar.addEventListener(st, dragStart, false);
+			document.addEventListener(en, dragEnd, false);
 
-			obj.timer = setInterval(function() {
-				// 获得遮罩的当前宽度，其实offsetwidth或clientwidth都行
-				var current = parseInt(obj.currentStyle ? obj.currentStyle['width'] : getComputedStyle(obj, null)['width']);
+			// 开头动画，分两步
+			function anime(obj, end, fn) {
+				obj.timer && clearInterval(obj.timer);
+				obj.timer = setInterval(function() {
+					// 获得遮罩的当前宽度，offsetwidth或clientwidth也可以
+					var current = parseInt(obj.currentStyle ? obj.currentStyle['width'] : getComputedStyle(obj, null)['width']);
+					// 目标宽度与当前宽度，每步动画大小
+					var speed = (end - current) / 10;
+					speed = speed > 0 ? Math.ceil(speed) : Math.floor(speed);
+					var stop = true;
+					if (current !== end) {
+						// 改变宽度
+						obj.style.width = current + speed + 'px';
+						stop = false;
+					}
+					if (stop) {
+						// 终止动画并执行回调
+						clearInterval(obj.timer);
+						obj.timer = null;
+						fn && fn();
+					}
+				}, 16);
+			}
 
-				// 目标宽度与当前宽度，每步动画大小
-				var speed = (end - current) / 10;
-				speed = speed > 0 ? Math.ceil(speed) : Math.floor(speed);
-
-				var stop = true;
-
-				if (current !== end) {
-					// 改变宽度
-					obj.style.width = current + speed + 'px';
-					stop = false;
-				}
-
-				if (stop) {
-					// 终止动画并执行回调
-					clearInterval(obj.timer);
-					obj.timer = null;
-					fn && fn();
-				}
-
-			}, 16);
-		}
-
-		setTimeout(function() {
-			anime(upper_mask, 0, function() {
-				// 回调的动画
-				anime(upper_mask, w_width - 300, function() {
-					// 回调的回调
-					drag_bar.style.display = 'block';
+			setTimeout(function() {
+				anime(upper_mask, 0, function() {
+					// 回调的动画
+					anime(upper_mask, w_width - 300, function() {
+						// 回调的回调
+						drag_bar.style.display = 'block';
+					});
 				});
-			});
-		}, 800);
+			}, 800);
 
-	})();
+		};
 
 	</script>
 </body>
